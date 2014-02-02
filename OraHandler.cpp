@@ -30,7 +30,7 @@ using namespace pugi;
 
 bool OraHandler::canRead() const{
 	//TODO: determine peek size
-	return device()->peek( 64 ).contains( "image/openraster" );
+	return device()->peek( 128 ).contains( "image/openraster" );
 }
 
 static QByteArray read_data( archive* a ){
@@ -64,7 +64,7 @@ static QString next_file( archive* a ){
 	switch( archive_read_next_header( a, &entry ) ){
 		case ARCHIVE_EOF: return QString();
 		case ARCHIVE_OK:
-			return archive_entry_pathname( entry ); //TODO: ensure it treats it as UTF-8
+			return QString::fromWCharArray( archive_entry_pathname_w( entry ) );
 			
 		default:
 			qWarning( "Can't read the next zip header: %s", archive_error_string(a) );
@@ -168,7 +168,7 @@ QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
 			qWarning( "No support for text" );
 		}
 		else if( name == "layer" ){
-			QString source( (*it).attribute( "src" ).value() ); //TODO: ensure it treats it as UTF-8
+			QString source( QString::fromUtf8( (*it).attribute( "src" ).value() ) );
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
