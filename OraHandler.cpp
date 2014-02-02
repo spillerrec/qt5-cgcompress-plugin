@@ -175,14 +175,16 @@ QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
 			double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
 			painter.setOpacity( opacity );
 			
-			//TODO: visibility
-			//TODO: composite-op
-			
-			std::map<QString,QImage>::const_iterator img_it = images.find( source );
-			if( img_it != images.end() )
-				painter.drawImage( x, y, img_it->second );
-			else
-				qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
+			std::string visibility = (*it).attribute( "visibility" ).value();
+			if( visibility == "" || visibility == "visible" ){
+				//TODO: composite-op
+				
+				std::map<QString,QImage>::const_iterator img_it = images.find( source );
+				if( img_it != images.end() )
+					painter.drawImage( x, y, img_it->second );
+				else
+					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
+			}
 		}
 		else{
 			qWarning( "Unrecognized element: %s", name.c_str() );
