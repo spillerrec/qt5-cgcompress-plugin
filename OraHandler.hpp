@@ -18,9 +18,11 @@
 #ifndef ORA_HANDLER_HPP
 #define ORA_HANDLER_HPP
 
+#include <map>
+
 #include <QImageIOHandler>
 #include <QImage>
-#include <map>
+#include <QPainter>
 
 #include <archive.h>
 
@@ -39,7 +41,7 @@ class OraHandler: public QImageIOHandler{
 		bool read_and_validate( archive *a );
 		bool load();
 		
-		QImage render_stack( pugi::xml_node node, int width, int height ) const;
+		void render_stack( pugi::xml_node node, QPainter &painter, int offset_x=0, int offset_y=0 ) const;
 	
 	public:
 		OraHandler( QIODevice *device ) : frame( 0 ){

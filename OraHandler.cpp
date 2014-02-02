@@ -22,7 +22,6 @@
 #include <QFile>
 #include <QImageReader>
 #include <QBuffer>
-#include <QPainter>
 
 #include <archive_entry.h>
 
@@ -148,49 +147,82 @@ bool OraHandler::load(){
 }
 
 
-QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
-	//TODO: check width and height
-	QImage output( width, height, QImage::Format_ARGB32 );
-	output.fill( qRgba( 0,0,0,0 ) ); //TOOD: necessary?
-	QPainter painter( &output );
+bool ora_composite_mode( std::string text, QPainter::CompositionMode &mode ){
+	static std::map<std::string,QPainter::CompositionMode> translator{
+			{ "", QPainter::CompositionMode_SourceOver }
+		,	{ "svg:src-over", QPainter::CompositionMode_SourceOver }
+		,	{ "svg:plus", QPainter::CompositionMode_Plus }
+		,	{ "svg:multiply", QPainter::CompositionMode_Multiply }
+		,	{ "svg:screen", QPainter::CompositionMode_Screen }
+		,	{ "svg:overlay", QPainter::CompositionMode_Overlay }
+		,	{ "svg:darken", QPainter::CompositionMode_Darken }
+		,	{ "svg:lighten", QPainter::CompositionMode_Lighten }
+		,	{ "svg:color-dodge", QPainter::CompositionMode_ColorDodge }
+		,	{ "svg:color-burn", QPainter::CompositionMode_ColorBurn }
+		,	{ "svg:hard-light", QPainter::CompositionMode_HardLight }
+		,	{ "svg:soft-light", QPainter::CompositionMode_SoftLight }
+		,	{ "svg:difference", QPainter::CompositionMode_Difference }
+		
+		/* Doesn't appear to be supported by QPainter
+		,	{ "svg:color", QPainter::CompositionMode_SourceOver }
+		,	{ "svg:luminosity", QPainter::CompositionMode_SourceOver }
+		,	{ "svg:hue", QPainter::CompositionMode_SourceOver }
+		,	{ "svg:saturation", QPainter::CompositionMode_SourceOver }
+		*/
+		};
 	
+	auto it = translator.find( text );
+	if( it != translator.end() ){
+		mode = (*it).second;
+		return true;
+	}
+	return false;
+}
+
+void OraHandler::render_stack( xml_node node, QPainter &painter, int offset_x, int offset_y ) const{
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
 		std::string name( (*it).name() );
 		if( name == "stack" ){
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
-			QImage img = render_stack( *it, width-x, height-y );
-			painter.setOpacity( 1.0 );
-			painter.drawImage( x, y, img );
+			render_stack( *it, painter, offset_x+x, offset_y+y );
 		}
 		else if( name == "text" ){
 			qWarning( "No support for text" );
 		}
 		else if( name == "layer" ){
 			QString source( QString::fromUtf8( (*it).attribute( "src" ).value() ) );
-			int x = (*it).attribute( "x" ).as_int( 0 );
-			int y = (*it).attribute( "y" ).as_int( 0 );
-			
-			double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
-			painter.setOpacity( opacity );
+			int x = (*it).attribute( "x" ).as_int( 0 ) + offset_x;
+			int y = (*it).attribute( "y" ).as_int( 0 ) + offset_y;
 			
 			std::string visibility = (*it).attribute( "visibility" ).value();
 			if( visibility == "" || visibility == "visible" ){
-				//TODO: composite-op
+				//composite-op
+				std::string composite = (*it).attribute( "composite-op" ).value();
+				QPainter::CompositionMode mode = QPainter::CompositionMode_SourceOver;
+				if( !ora_composite_mode( composite, mode ) )
+					qWarning( "Unsupported composite-op: %s", composite.c_str() );
+				painter.setCompositionMode( mode );
+				
+				double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
+				painter.setOpacity( opacity );
 				
 				std::map<QString,QImage>::const_iterator img_it = images.find( source );
 				if( img_it != images.end() )
 					painter.drawImage( x, y, img_it->second );
 				else
 					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
+				
+				//Restore modified settings
+				painter.setOpacity( 1.0 );
+				painter.setCompositionMode( QPainter::CompositionMode_SourceOver );
 			}
 		}
 		else{
 			qWarning( "Unrecognized element: %s", name.c_str() );
 		}
 	}
-	return output;
 }
 
 bool OraHandler::read( QImage *img_pointer ){
@@ -208,9 +240,18 @@ bool OraHandler::read( QImage *img_pointer ){
 		*img_pointer = merged;
 	else{
 		xml_node img = doc.child( "image" );
-		int width = img.attribute( "w" ).as_int();
-		int height = img.attribute( "h" ).as_int();
-		*img_pointer = render_stack( img, width, height );
+		int width = img.attribute( "w" ).as_int( -1 );
+		int height = img.attribute( "h" ).as_int( -1 );
+		if( width <= 0 || height <= 0 ){
+			qWarning( "Image dimensions are invalid" );
+			return false;
+		}
+		
+		QImage output( width, height, QImage::Format_ARGB32_Premultiplied );
+		output.fill( qRgba( 0,0,0,0 ) );
+		QPainter painter( &output );
+		render_stack( img, painter );
+		*img_pointer = output;
 	}
 	
 	return true;
