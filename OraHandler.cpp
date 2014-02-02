@@ -151,6 +151,7 @@ bool OraHandler::load(){
 QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
 	//TODO: check width and height
 	QImage output( width, height, QImage::Format_ARGB32 );
+	output.fill( qRgba( 0,0,0,0 ) ); //TOOD: necessary?
 	QPainter painter( &output );
 	
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
@@ -160,6 +161,7 @@ QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
 			QImage img = render_stack( *it, width-x, height-y );
+			painter.setOpacity( 1.0 );
 			painter.drawImage( x, y, img );
 		}
 		else if( name == "text" ){
@@ -170,9 +172,11 @@ QImage OraHandler::render_stack( xml_node node, int width, int height ) const{
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
+			double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
+			painter.setOpacity( opacity );
+			
 			//TODO: visibility
 			//TODO: composite-op
-			//TODO: opacity
 			
 			std::map<QString,QImage>::const_iterator img_it = images.find( source );
 			if( img_it != images.end() )
