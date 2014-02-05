@@ -20,6 +20,7 @@
 #include <cstring>
 
 #include <QFile>
+#include <QFileInfo>
 #include <QImageReader>
 #include <QBuffer>
 
@@ -51,10 +52,10 @@ static QByteArray read_data( archive* a ){
 	}
 }
 
-static QImage read_image( archive* a ){
+static QImage read_image( archive* a, const char* format=nullptr ){
 	QByteArray raw = read_data( a );
 	QBuffer buf( &raw );
-	QImageReader reader( (QIODevice*)&buf );
+	QImageReader reader( (QIODevice*)&buf, format );
 	return reader.canRead() ? reader.read() : QImage();
 }
 
@@ -95,7 +96,8 @@ bool OraHandler::read_and_validate( archive *a ){
 	QString name;
 	while( !(name = next_file( a )).isNull() ){
 		if( name.startsWith( "data/" ) ){
-			QImage img = read_image( a );
+			QString suffix = QFileInfo(name).suffix();
+			QImage img = read_image( a, suffix.toLocal8Bit().constData() );
 			if( !img.isNull() )
 				images.insert( std::pair<QString,QImage>( name, img ) );
 			else
