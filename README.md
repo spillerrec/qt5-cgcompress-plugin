@@ -1,4 +1,4 @@
-qt5-ora-plugin
+qt5-cgcompress-plugin
 ==============
 
-QT5 plugin for supporting reading OpenRaster images
+QT5 plugin for supporting reading cgCompress images.

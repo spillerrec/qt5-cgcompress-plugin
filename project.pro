@@ -1,4 +1,4 @@
-TARGET  = $$qtLibraryTarget(ora)
+TARGET  = $$qtLibraryTarget(cgcompress)
 TEMPLATE = lib
 CONFIG += plugin
 LIBS += -larchive -liconv -lz

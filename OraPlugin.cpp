@@ -7,12 +7,12 @@
 #include "OraHandler.hpp"
 
 QStringList OraPlugin::keys() const{
-	return QStringList() << "ora";
+	return QStringList() << "cgcompress";
 }
 
 
 QImageIOPlugin::Capabilities OraPlugin::capabilities( QIODevice *device, const QByteArray &format ) const{
-	if( format == "ora" )
+	if( format == "cgcompress" )
 		return Capabilities( CanRead );
 	else
 		return 0;

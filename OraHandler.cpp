@@ -30,7 +30,7 @@ using namespace pugi;
 
 bool OraHandler::canRead() const{
 	//TODO: determine peek size
-	return device()->peek( 128 ).contains( "image/openraster" );
+	return true;// device()->peek( 128 ).contains( "image/openraster" );
 }
 
 static QByteArray read_data( archive* a ){
@@ -130,6 +130,7 @@ bool OraHandler::read_and_validate( archive *a ){
 }
 
 bool OraHandler::load(){
+	loaded = true;
 	bool success = true;
 	archive* a = archive_read_new();
 	archive_read_support_format_zip(a);
@@ -231,12 +232,12 @@ bool OraHandler::read( QImage *img_pointer ){
 	frame++;
 	*img_pointer = QImage();
 	
-	if( frame == 1 )
+	if( !loaded )
 		if( !load() )
 			return false;
 	
-	if( frame > 1 )
-		return false;
+//	if( frame > 1 )
+//		return false;
 	
 	if( !merged.isNull() )
 		*img_pointer = merged;
@@ -249,10 +250,16 @@ bool OraHandler::read( QImage *img_pointer ){
 			return false;
 		}
 		
+		xml_node stack = img.child( "stack" );
+		for( int i=0; i<frame-1; i++ )
+			stack = stack.next_sibling( "stack" );
+		if( !stack )
+			return false;
+		
 		QImage output( width, height, QImage::Format_ARGB32_Premultiplied );
 		output.fill( qRgba( 0,0,0,0 ) );
 		QPainter painter( &output );
-		render_stack( img, painter );
+		render_stack( stack, painter );
 		*img_pointer = output;
 	}
 	

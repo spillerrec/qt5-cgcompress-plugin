@@ -39,6 +39,7 @@ class OraHandler: public QImageIOHandler{
 		pugi::xml_document doc;
 		
 		bool read_and_validate( archive *a );
+		bool loaded{ false };
 		bool load();
 		
 		void render_stack( pugi::xml_node node, QPainter &painter, int offset_x=0, int offset_y=0 ) const;
@@ -46,11 +47,19 @@ class OraHandler: public QImageIOHandler{
 	public:
 		OraHandler( QIODevice *device ) : frame( 0 ){
 			setDevice( device );
-			setFormat( "ora" );
+			setFormat( "cgcompress" );
 		}
 		
 		bool canRead() const;
 		bool read( QImage *image );
+		int imageCount() const override{ return 0; }
+		
+		bool supportsOption( ImageOption option ) const{
+			switch( option ){
+				case QImageIOHandler::Animation: return true;
+				default: return false;
+			}
+		}
 		
 };
 
