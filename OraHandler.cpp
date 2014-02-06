@@ -103,8 +103,9 @@ bool OraHandler::read_and_validate( archive *a ){
 			else
 				qWarning( "Could not read data file: %s", name.toLocal8Bit().constData() );
 		}
-		else if( name == "Thumbnails/thumbnail.png" ){
-			thumbnail = read_image( a );
+		else if( name.startsWith( "Thumbnails/thumbnail." ) ){
+			QString suffix = QFileInfo(name).suffix();
+			thumbnail = read_image( a, suffix.toLocal8Bit().constData() );
 		}
 		else if( name == "mergedimage.png" ){
 			merged = read_image( a );
