@@ -130,14 +130,33 @@ bool OraHandler::read_and_validate( archive *a ){
 	return true;
 }
 
+struct ReadingData{
+	QIODevice& device;
+	qint64 buff_size; //TODO: how large should this be?
+	QByteArray arr;
+	
+	ReadingData( QIODevice& device, int buff_size = 1024*4 ) : device( device ), buff_size(buff_size) { }
+};
+ssize_t stream_read( archive*, void* data, const void** buff ){
+	ReadingData& stream = *(ReadingData*)data;
+	stream.arr = stream.device.read( stream.buff_size );
+	*buff = stream.arr.constData();
+	return stream.arr.size();
+}
+
+int stream_close( archive*, void *data ){
+	((ReadingData*)data)->device.close();
+	return ARCHIVE_OK;
+}
+
 bool OraHandler::load(){
 	loaded = true;
 	bool success = true;
 	archive* a = archive_read_new();
 	archive_read_support_format_zip(a);
 	
-	QByteArray file = device()->readAll();
-	if( archive_read_open_memory( a, file.data(), file.size() ) ){
+	ReadingData data( *device() );
+	if( archive_read_open( a, &data, nullptr, stream_read, stream_close ) ){
 		qDebug( "couldn't open: %s", archive_error_string(a) );
 		success = false;
 	}
