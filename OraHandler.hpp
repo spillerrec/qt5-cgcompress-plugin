@@ -45,21 +45,34 @@ class OraHandler: public QImageIOHandler{
 		void render_stack( pugi::xml_node node, QPainter &painter, int offset_x=0, int offset_y=0 ) const;
 	
 	public:
-		OraHandler( QIODevice *device ) : frame( 0 ){
+		OraHandler( QIODevice *device ) : frame( -1 ){
 			setDevice( device );
 			setFormat( "cgcompress" );
 		}
 		
 		bool canRead() const;
 		bool read( QImage *image );
-		int imageCount() const override{ return 0; }
 		
-		bool supportsOption( ImageOption option ) const{
+		//Requires that read have been called at least once!
+		int imageCount() const override;
+		int nextImageDelay() const override;
+		int loopCount() const override;
+		
+		//Support for image number and frame jumping
+		int currentImageNumber() const override{ return frame; }
+		bool jumpToImage( int image_number ) override{
+			frame = image_number - 1;
+			return true;
+		}
+		bool jumpToNextImage() override{ return jumpToImage( frame + 1 ); }
+		
+		bool supportsOption( ImageOption option ) const override{
 			switch( option ){
-				case QImageIOHandler::Animation: return true;
+				case Animation: return true;
 				default: return false;
 			}
 		}
+		QVariant option( ImageOption option ) const override;
 		
 };
 

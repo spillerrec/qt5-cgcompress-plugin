@@ -18,11 +18,13 @@
 #include "OraHandler.hpp"
 
 #include <cstring>
+#include <iterator>
 
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
 #include <QBuffer>
+#include <QVariant>
 
 #include <archive_entry.h>
 
@@ -256,9 +258,6 @@ bool OraHandler::read( QImage *img_pointer ){
 		if( !load() )
 			return false;
 	
-//	if( frame > 1 )
-//		return false;
-	
 	if( !merged.isNull() )
 		*img_pointer = merged;
 	else{
@@ -271,7 +270,7 @@ bool OraHandler::read( QImage *img_pointer ){
 		}
 		
 		xml_node stack = img.child( "stack" );
-		for( int i=0; i<frame-1; i++ )
+		for( int i=0; i<frame; i++ )
 			stack = stack.next_sibling( "stack" );
 		if( !stack )
 			return false;
@@ -286,4 +285,33 @@ bool OraHandler::read( QImage *img_pointer ){
 	return true;
 }
 
+int OraHandler::imageCount() const{
+	//Counts the amount of "stack" elements in "image"
+	auto frames = doc.child( "image" ).children( "stack" );
+	return std::distance( frames.begin(), frames.end() );
+}
 
+int OraHandler::nextImageDelay() const{
+	int wanted = frame + 1 >= imageCount() ? 0 : frame + 1;
+	
+	//Iterate to the node we want
+	auto node = doc.child( "image" ).children( "stack" ).begin();
+	while( wanted > 0 ){
+		node++;
+		wanted--;
+	}
+	
+	return node->attribute( "delay" ).as_int( 100 );
+}
+int OraHandler::loopCount() const{
+	return doc.child( "image" ).attribute( "loops" ).as_int( 0 );
+}
+
+QVariant OraHandler::option( QImageIOHandler::ImageOption option ) const{
+	switch( option ){
+		//Use loopCount() if loaded, otherwise just say yes
+		case Animation: return loaded ? loopCount() != 0 : true;
+		default: return false;
+	}
+	return QVariant();
+}
