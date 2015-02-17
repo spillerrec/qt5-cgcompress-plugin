@@ -173,6 +173,7 @@ bool OraHandler::load(){
 
 static void alpha_replace( QImage &output, QImage image, int dx, int dy ){
 	//TODO: check range
+	image = image.convertToFormat( QImage::Format_ARGB32 );
 	for( int iy=0; iy<image.height(); iy++ ){
 		auto out = (QRgb*)output.scanLine( iy+dy );
 		auto in  = (const QRgb*)image.constScanLine( iy );
@@ -300,7 +301,7 @@ bool OraHandler::read( QImage *img_pointer ){
 		if( !stack )
 			return false;
 		
-		QImage output( width, height, QImage::Format_ARGB32_Premultiplied );
+		QImage output( width, height, QImage::Format_ARGB32 );
 		output.fill( qRgba( 0,0,0,0 ) );
 		render_stack( stack, output );
 		*img_pointer = output;
