@@ -171,6 +171,17 @@ bool OraHandler::load(){
 	return success;
 }
 
+static void alpha_replace( QImage &output, QImage image, int dx, int dy ){
+	//TODO: check range
+	for( int iy=0; iy<image.height(); iy++ ){
+		auto out = (QRgb*)output.scanLine( iy+dy );
+		auto in  = (const QRgb*)image.constScanLine( iy );
+		for( int ix=0; ix<image.width(); ix++ )
+			if( in[ix] != qRgba( 255, 0, 255, 0 ) )
+				out[ix+dx] = in[ix];
+	}
+}
+
 
 bool ora_composite_mode( std::string text, QPainter::CompositionMode &mode ){
 	static std::map<std::string,QPainter::CompositionMode> translator{
@@ -204,14 +215,15 @@ bool ora_composite_mode( std::string text, QPainter::CompositionMode &mode ){
 	return false;
 }
 
-void OraHandler::render_stack( xml_node node, QPainter &painter, int offset_x, int offset_y ) const{
+void OraHandler::render_stack( xml_node node, QImage &output, int offset_x, int offset_y ) const{
+	QPainter painter( &output );
 	for( xml_node_iterator it = --node.end(); it != --node.begin(); it-- ){
 		std::string name( (*it).name() );
 		if( name == "stack" ){
 			int x = (*it).attribute( "x" ).as_int( 0 );
 			int y = (*it).attribute( "y" ).as_int( 0 );
 			
-			render_stack( *it, painter, offset_x+x, offset_y+y );
+			render_stack( *it, output, offset_x+x, offset_y+y );
 		}
 		else if( name == "text" ){
 			qWarning( "No support for text" );
@@ -223,25 +235,38 @@ void OraHandler::render_stack( xml_node node, QPainter &painter, int offset_x, i
 			
 			std::string visibility = (*it).attribute( "visibility" ).value();
 			if( visibility == "" || visibility == "visible" ){
+				QImage image;
+				std::map<QString,QImage>::const_iterator img_it = images.find( source );
+				if( img_it != images.end() )
+					image = img_it->second;
+				else{
+					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
+					return;
+				}
+					
 				//composite-op
 				std::string composite = (*it).attribute( "composite-op" ).value();
 				QPainter::CompositionMode mode = QPainter::CompositionMode_SourceOver;
-				if( !ora_composite_mode( composite, mode ) )
-					qWarning( "Unsupported composite-op: %s", composite.c_str() );
-				painter.setCompositionMode( mode );
-				
-				double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
-				painter.setOpacity( opacity );
-				
-				std::map<QString,QImage>::const_iterator img_it = images.find( source );
-				if( img_it != images.end() )
-					painter.drawImage( x, y, img_it->second );
-				else
-					qWarning( "Layer source not found: %s", source.toLocal8Bit().constData() );
-				
-				//Restore modified settings
-				painter.setOpacity( 1.0 );
-				painter.setCompositionMode( QPainter::CompositionMode_SourceOver );
+				if( !ora_composite_mode( composite, mode ) ){
+					if( composite == "cgcompress:alpha-replace" )
+						alpha_replace( output, image, x, y );
+					else{
+						qWarning( "Unsupported composite-op: %s", composite.c_str() );
+						return;
+					}
+				}
+				else{
+					painter.setCompositionMode( mode );
+					
+					double opacity = (*it).attribute( "opacity" ).as_double( 1.0 );
+					painter.setOpacity( opacity );
+					
+					painter.drawImage( x, y, image );
+					
+					//Restore modified settings
+					painter.setOpacity( 1.0 );
+					painter.setCompositionMode( QPainter::CompositionMode_SourceOver );
+				}
 			}
 		}
 		else{
@@ -277,8 +302,7 @@ bool OraHandler::read( QImage *img_pointer ){
 		
 		QImage output( width, height, QImage::Format_ARGB32_Premultiplied );
 		output.fill( qRgba( 0,0,0,0 ) );
-		QPainter painter( &output );
-		render_stack( stack, painter );
+		render_stack( stack, output );
 		*img_pointer = output;
 	}
 	

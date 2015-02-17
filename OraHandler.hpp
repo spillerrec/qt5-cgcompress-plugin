@@ -42,7 +42,7 @@ class OraHandler: public QImageIOHandler{
 		bool loaded{ false };
 		bool load();
 		
-		void render_stack( pugi::xml_node node, QPainter &painter, int offset_x=0, int offset_y=0 ) const;
+		void render_stack( pugi::xml_node node, QImage &output, int offset_x=0, int offset_y=0 ) const;
 	
 	public:
 		OraHandler( QIODevice *device ) : frame( -1 ){
