@@ -6,6 +6,11 @@
 #include "OraPlugin.hpp"
 #include "OraHandler.hpp"
 
+#if QT_VERSION < 0x050000
+Q_EXPORT_PLUGIN2(pnp_oraplugin, OraPlugin)
+#endif
+
+
 QStringList OraPlugin::keys() const{
 	return QStringList() << "cgcompress";
 }
