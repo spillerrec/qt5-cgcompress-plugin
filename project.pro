@@ -1,7 +1,10 @@
 TARGET  = $$qtLibraryTarget(cgcompress)
 TEMPLATE = lib
 CONFIG += plugin
-LIBS += -larchive -liconv -lz
+LIBS += -larchive -lz
+win32{
+	LIBS += -liconv
+}
 
 # C++11 support
 QMAKE_CXXFLAGS += -std=c++11
