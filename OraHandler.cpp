@@ -89,7 +89,7 @@ bool OraHandler::read_and_validate( archive *a ){
 	//TODO: check if it is STORED?
 	
 	QByteArray mime_data = read_data( a );
-	if( mime_data != "image/openraster" ){
+	if( mime_data != "image/openraster" && mime_data != "image/x-cgcompress" ){
 		qWarning( "Mimetype does not match" );
 		return false;
 	}
@@ -124,8 +124,8 @@ bool OraHandler::read_and_validate( archive *a ){
 	}
 	
 	if( thumbnail.isNull() ){
-		qWarning( "Ora image does not contain thumbnail as required" );
-		return false;
+		qWarning( "CgCompress image does not contain thumbnail as required" );
+		//return false;
 	}
 	//TODO: check for stack.xml
 	
@@ -251,6 +251,8 @@ void OraHandler::render_stack( xml_node node, QImage &output, int offset_x, int 
 				if( !ora_composite_mode( composite, mode ) ){
 					if( composite == "cgcompress:alpha-replace" )
 						alpha_replace( output, image, x, y );
+				//	else if( composite == "cgcompress:diff" )
+				//		diff_combine( output, image, x, y );
 					else{
 						qWarning( "Unsupported composite-op: %s", composite.c_str() );
 						return;
